@@ -1,0 +1,144 @@
+from textblob.classifiers import NaiveBayesClassifier
+from nltk.corpus import stopwords
+import csv
+import sys
+import pickle
+from nltk.tokenize import word_tokenize
+reload(sys)
+# sys.setdefaultencoding('utf-8')
+sys.setdefaultencoding("ISO-8859-1")
+import time
+import datetime
+from nltk.stem import WordNetLemmatizer
+
+
+def pickle_dump(file_to_pickle_to, classifiers_name):
+    """ This function will dump the serilized trained model into a file"""
+    f = open(file_to_pickle_to, 'wb')
+    pickle.dump(classifiers_name, f)
+    f.close()
+
+
+
+def classify(training_dataset):
+    """ This function trains the model, it takes the training dataset list """
+    classifier_to_return = NaiveBayesClassifier(training_dataset)
+    return classifier_to_return
+
+
+
+
+def test(rows,outputindex,tweetindex, files):
+    """ This function will test the trained model and output accuracy percentage """
+    count = 0.00
+    correct = 0.00
+    wrong = 0.00
+
+    #gets the beggining of testing index
+    beg_test = get_training_num(files)
+
+    # gets the ending of testing index
+    end_test = get_testing_num(files)
+
+    for i in rows[beg_test:end_test]:
+        outcome = i[int(outputindex)]
+        tweet = i[int(tweetindex)]
+
+        #this predicts the output sentiment
+        sentiment_output = classifier.classify(removewords(tweet))
+
+        if outcome != sentiment_output:
+            wrong = wrong + 1.0
+            count = count + 1.0
+        else:
+            count = count + 1.0
+            correct = correct + 1.0
+        print 'label is  --> ' + outcome + '\tclassification is \t-->\t' + sentiment_output + '\t' + '\t' + str(
+            wrong) + '\t' + '\t' + str(count)  # => 'pos'
+
+    print 'wrong = ' + str(wrong) + '\t' + 'count = ' + str(count) + '\t' + str(float((correct / count) * 100)) + '%'
+
+
+def trainit(rows, files, outputindex, tweetindex):
+    """ This function will test the trained model and output accuracy percentage """
+    #gets the max row for training
+    begginingrow = get_training_num(files)
+
+    #new dataset with tweets and results to pass for training
+    training = []
+    for i in rows[1:begginingrow]:
+        outcome = i[int(outputindex)]
+        tweet = i[int(tweetindex)]
+        training.append(((removewords(tweet)), outcome))
+    return training
+
+def removewords(strs):
+    """ This function will smooth the dataset before training and testing. it will tokenize, remove stopwordsand  lammatize words  """
+
+    stop_words = set(stopwords.words('english'))
+    lemmatizer = WordNetLemmatizer()
+    tokenized = word_tokenize(strs + str(' '))
+    tweetContent = [''.join(w) for w in tokenized if not w in stop_words]
+    text = ' '.join(str(e) for e in tweetContent)
+    texts = lemmatizer.lemmatize(text)
+    return texts
+
+def get_training_num(files):
+    """ gets the number of training dataset indexes """
+    numberofit = sum(1 for line in open(files))
+    return numberofit-100
+
+def get_testing_num(files):
+    """ gets the total number of  dataset  """
+    numberofit = sum(1 for line in open(files))
+    return numberofit
+
+
+
+
+if __name__ == '__main__':
+    files = "/Users/dougmengistu/Downloads/Airline-Trail.csv"
+    pickle_file = '/Users/dougmengistu/Downloads/classifier2.pickle'
+    tokentime = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+
+    with open(files, "rU") as f:
+        reader = csv.reader(f, delimiter=",")
+        rows = list(reader)
+        tweets = [str(item[1]) for item in rows]
+        sentiments = [str(item[0]) for item in rows]
+        outputSentiment = []
+        y = str(tweets)
+        row_count = sum(1 for row in f)
+
+
+    print "=======================tokenizing it and appending ===========================", tokentime
+
+    Classifytime = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+
+
+
+    training = trainit(rows, files,5,14)
+
+    print "========================Classifying ===========================", Classifytime
+
+    Testtime = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+
+    # Pass in data as is
+    # # When classifying text, features are extracted automatically
+    classifier = classify(training)
+
+
+    print "========================= Testing ====================================", Testtime
+
+    Pickletime = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+
+    test(rows, 5,14, files)
+
+    print "==========================Pickling ===========================", Pickletime
+
+    pickle_dump(pickle_file,classifier)
+
+
+
+
+
